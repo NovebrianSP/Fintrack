@@ -13,7 +13,9 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!isSupabaseConfigured) return to.name === 'login' ? { name: 'home' } : true
+  if (!isSupabaseConfigured) {
+    return to.name === 'login' ? true : { name: 'login', query: { error: 'config' } }
+  }
 
   const auth = useAuthStore()
   try {

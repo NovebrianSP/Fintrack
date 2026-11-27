@@ -2,17 +2,19 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, Check,
-  ChevronDown, CircleHelp, CreditCard, Filter, LayoutDashboard,
+  ChevronDown, CreditCard, Filter, LayoutDashboard,
   Leaf, LogOut, Menu, Moon, Plus, Settings2, ShieldCheck, Sun, Target,
   TrendingUp, Wallet, X, Trash2, Pencil, PiggyBank,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { budgetDefaults, savingDefaults, type MonthlyBudget, type MonthlySaving, type Transaction, type TransactionType } from '@/types/finance'
 import { currentDate, formatDate, formatRupiah } from '@/utils/formatters'
-import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { useRouter } from 'vue-router'
 
 type Section = 'overview' | 'transactions' | 'savings'
 const auth = useAuthStore()
+const router = useRouter()
 const section = ref<Section>('overview')
 const now = new Date()
 const selectedMonth = ref(now.getMonth() + 1)
@@ -44,59 +46,13 @@ const savedInputs = reactive<Record<number, string>>({})
 const isDark = computed(() => theme.value === 'dark')
 const selectedMonthName = computed(() => monthNames[selectedMonth.value - 1] ?? monthNames[0])
 
-function sampleTransactions(month: number, year: number): Transaction[] {
-  const date = (day: number) => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-  return [
-    { id: 'demo-income', transaction_date: date(1), type: 'Pemasukan', category: 'Uang Saku Magang', title: 'Uang saku magang', amount: 2_538_691, notes: 'Transfer bulanan' },
-    { id: 'demo-rent', transaction_date: date(2), type: 'Pengeluaran', category: 'Sewa Kos', title: 'Bayar kos', amount: 400_000, notes: null },
-    { id: 'demo-food-1', transaction_date: date(3), type: 'Pengeluaran', category: 'Makan', title: 'Belanja makan mingguan', amount: 205_000, notes: null },
-    { id: 'demo-water', transaction_date: date(5), type: 'Pengeluaran', category: 'Air Mineral', title: 'Air minum galon', amount: 66_000, notes: null },
-    { id: 'demo-food-2', transaction_date: date(8), type: 'Pengeluaran', category: 'Makan', title: 'Makan siang', amount: 197_000, notes: null },
-    { id: 'demo-electric', transaction_date: date(10), type: 'Pengeluaran', category: 'Token Listrik Kos', title: 'Token listrik', amount: 35_000, notes: null },
-    { id: 'demo-transport', transaction_date: date(12), type: 'Pengeluaran', category: 'Transportasi', title: 'Transportasi', amount: 45_000, notes: null },
-    { id: 'demo-personal', transaction_date: date(15), type: 'Pengeluaran', category: 'Kebutuhan Pribadi', title: 'Kebutuhan harian', amount: 55_000, notes: null },
-  ]
-}
-
-function sampleSavings(year: number): MonthlySaving[] {
-  return Array.from({ length: 12 }, (_month, monthIndex) => {
-    const month = monthIndex + 1
-    const total = year === currentYear && month <= now.getMonth() + 1 ? 600_000 + month * 38_000 : 0
-    return savingDefaults.map((item) => ({
-      month,
-      year,
-      allocation_post: item.allocation_post,
-      target_percentage: item.target_percentage,
-      target_amount: Math.round(1_333_691 * item.target_percentage),
-      saved_amount: Math.round(total * item.target_percentage),
-      storage_note: null,
-    }))
-  }).flat()
-}
-
-function getLocalData() {
-  const prefix = 'fintrack-demo'
-  try {
-    const storedTransactions = localStorage.getItem(`${prefix}-transactions`)
-    transactions.value = storedTransactions
-      ? JSON.parse(storedTransactions) as Transaction[]
-      : selectedYear.value === currentYear ? sampleTransactions(selectedMonth.value, selectedYear.value) : []
-    const storedSavings = localStorage.getItem(`${prefix}-savings-${selectedYear.value}`)
-    savings.value = storedSavings ? JSON.parse(storedSavings) as MonthlySaving[] : sampleSavings(selectedYear.value)
-    if (!storedSavings) localStorage.setItem(`${prefix}-savings-${selectedYear.value}`, JSON.stringify(savings.value))
-    budgets.value = budgetDefaults.map((budget) => ({
-      ...budget, month: selectedMonth.value, year: selectedYear.value,
-    }))
-  } catch (error) {
-    console.error('Gagal membaca data demo:', error)
-    pageError.value = 'Penyimpanan lokal tidak dapat dibaca. Periksa pengaturan browser.'
-  }
-}
-
 async function loadData() {
   pageError.value = ''
-  if (!isSupabaseConfigured || !supabase) {
-    getLocalData()
+  if (!supabase) {
+    transactions.value = []
+    budgets.value = []
+    savings.value = []
+    pageError.value = 'Koneksi Supabase belum dikonfigurasi. Silakan hubungi administrator.'
     return
   }
   busy.value = true
@@ -243,23 +199,15 @@ async function saveTransaction() {
   }
   busy.value = true
   try {
-    if (isSupabaseConfigured && supabase) {
-      if (editingTransactionId.value) {
-        const { data, error } = await supabase.from('transactions').update(payload).eq('id', editingTransactionId.value).select().single()
-        if (error) throw error
-        transactions.value = transactions.value.map((item) => item.id === editingTransactionId.value ? data as Transaction : item)
-      } else {
-        const { data, error } = await supabase.from('transactions').insert({ ...payload, user_id: auth.session?.user.id }).select().single()
-        if (error) throw error
-        transactions.value.push(data as Transaction)
-      }
+    if (!supabase || !auth.session) throw new Error('Sesi login tidak tersedia. Silakan masuk kembali.')
+    if (editingTransactionId.value) {
+      const { data, error } = await supabase.from('transactions').update(payload).eq('id', editingTransactionId.value).select().single()
+      if (error) throw error
+      transactions.value = transactions.value.map((item) => item.id === editingTransactionId.value ? data as Transaction : item)
     } else {
-      if (editingTransactionId.value) {
-        transactions.value = transactions.value.map((item) => item.id === editingTransactionId.value ? { ...item, ...payload } : item)
-      } else {
-        transactions.value.push({ ...payload, id: crypto.randomUUID() })
-      }
-      localStorage.setItem('fintrack-demo-transactions', JSON.stringify(transactions.value))
+      const { data, error } = await supabase.from('transactions').insert({ ...payload, user_id: auth.session.user.id }).select().single()
+      if (error) throw error
+      transactions.value.push(data as Transaction)
     }
     modalOpen.value = false
     showToast(editingTransactionId.value ? 'Transaksi berhasil diperbarui.' : 'Transaksi berhasil ditambahkan.')
@@ -273,12 +221,10 @@ async function saveTransaction() {
 
 async function deleteTransaction(item: Transaction) {
   try {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from('transactions').delete().eq('id', item.id)
-      if (error) throw error
-    }
+    if (!supabase || !auth.session) throw new Error('Sesi login tidak tersedia. Silakan masuk kembali.')
+    const { error } = await supabase.from('transactions').delete().eq('id', item.id)
+    if (error) throw error
     transactions.value = transactions.value.filter((transaction) => transaction.id !== item.id)
-    if (!isSupabaseConfigured) localStorage.setItem('fintrack-demo-transactions', JSON.stringify(transactions.value))
     showToast('Transaksi dihapus.')
   } catch (error) {
     console.error('Gagal menghapus transaksi:', error)
@@ -304,13 +250,11 @@ async function updateMonthlySaving(month: number) {
     storage_note: null,
   }))
   try {
-    if (isSupabaseConfigured && supabase) {
-      const values = rows.map((row) => ({ ...row, user_id: auth.session?.user.id }))
-      const { error } = await supabase.from('monthly_savings').upsert(values, { onConflict: 'user_id,month,year,allocation_post' })
-      if (error) throw error
-    }
+    if (!supabase || !auth.session) throw new Error('Sesi login tidak tersedia. Silakan masuk kembali.')
+    const values = rows.map((row) => ({ ...row, user_id: auth.session?.user.id }))
+    const { error } = await supabase.from('monthly_savings').upsert(values, { onConflict: 'user_id,month,year,allocation_post' })
+    if (error) throw error
     savings.value = savings.value.filter((item) => item.month !== month).concat(rows)
-    if (!isSupabaseConfigured) localStorage.setItem(`fintrack-demo-savings-${selectedYear.value}`, JSON.stringify(savings.value))
     showToast(`Tabungan ${monthNames[month - 1]} tersimpan.`)
   } catch (error) {
     console.error('Gagal menyimpan tabungan:', error)
@@ -321,6 +265,10 @@ async function updateMonthlySaving(month: number) {
 async function signOut() {
   try {
     await auth.signOut()
+    transactions.value = []
+    budgets.value = []
+    savings.value = []
+    await router.replace({ name: 'login' })
   } catch (error) {
     pageError.value = error instanceof Error ? `Gagal keluar: ${error.message}` : 'Gagal keluar dari akun.'
   }
@@ -363,9 +311,9 @@ function setSavedInput(month: number, event: Event) {
         <button @click="setSection('savings')">Lihat progres <ArrowRight :size="14" /></button>
       </div>
       <div class="sidebar-bottom">
-        <div class="avatar">{{ auth.session?.user.email?.slice(0, 1).toUpperCase() ?? 'A' }}</div>
-        <div class="profile-copy"><strong>{{ auth.session?.user.email?.split('@')[0] ?? 'Akun demo' }}</strong><span>{{ isSupabaseConfigured ? 'Personal account' : 'Mode demo' }}</span></div>
-        <button class="icon-button profile-menu" :aria-label="isSupabaseConfigured ? 'Keluar' : 'Bantuan'" @click="isSupabaseConfigured ? signOut() : showToast('Data demo tersimpan hanya di browser ini.')"><LogOut v-if="isSupabaseConfigured" :size="17" /><CircleHelp v-else :size="17" /></button>
+        <div class="avatar">{{ auth.session?.user.email?.slice(0, 1).toUpperCase() ?? 'U' }}</div>
+        <div class="profile-copy"><strong>{{ auth.session?.user.email?.split('@')[0] ?? 'Pengguna' }}</strong><span>Akun personal</span></div>
+        <button class="icon-button profile-menu" aria-label="Keluar" @click="signOut"><LogOut :size="17" /></button>
       </div>
     </aside>
 
@@ -374,7 +322,7 @@ function setSavedInput(month: number, event: Event) {
         <button class="icon-button mobile-menu-button" aria-label="Buka menu" @click="mobileMenuOpen = !mobileMenuOpen"><Menu :size="20" /></button>
         <div class="breadcrumb"><span>Workspace</span><span class="crumb-separator">/</span><strong>{{ section === 'overview' ? 'Ringkasan' : section === 'transactions' ? 'Transaksi' : 'Tabungan' }}</strong></div>
         <div class="top-actions">
-          <div class="sync-state"><span class="sync-indicator"></span>{{ isSupabaseConfigured ? 'Tersinkron' : 'Mode demo' }}</div>
+          <div class="sync-state"><span class="sync-indicator"></span>Supabase aktif</div>
           <button class="icon-button theme-toggle" :aria-label="isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'" @click="theme = isDark ? 'light' : 'dark'"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
           <button class="icon-button notification-button" aria-label="Notifikasi" @click="showToast('Kamu sudah mengetahui semua kabar terbaru.')"><Bell :size="18" /><i></i></button>
           <div class="top-avatar">{{ auth.session?.user.email?.slice(0, 1).toUpperCase() ?? 'A' }}</div>

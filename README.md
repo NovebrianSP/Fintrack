@@ -9,11 +9,11 @@ npm install
 npm run dev
 ```
 
-Tanpa kredensial Supabase, aplikasi terbuka dalam **mode demo**. Data demo disimpan di browser yang sedang digunakan.
+Autentikasi Supabase wajib aktif. Tanpa kredensial Supabase, halaman utama tetap terkunci dan pengguna diarahkan ke halaman login.
 
 ## Aktifkan Supabase
 
-1. Salin `.env.example` menjadi `.env.local`, lalu isi URL project dan anon/publishable key dari Supabase.
+1. Salin `.env.example` menjadi `.env.local`, lalu isi URL project dan publishable/anon key dari Supabase.
 2. Jalankan SQL di `supabase/schema.sql` melalui Supabase SQL Editor.
 3. Aktifkan Email/Password pada Authentication → Providers. Untuk alur pendaftaran tanpa konfirmasi, nonaktifkan Email Confirmations di pengaturan Auth; jika tetap aktif, pengguna perlu mengonfirmasi email sebelum masuk.
 4. Jalankan ulang server Vite setelah mengubah environment variable.

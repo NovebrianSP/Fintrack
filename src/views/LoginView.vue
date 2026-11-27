@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight, Eye, EyeOff, Leaf, LockKeyhole, Mail } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { isSupabaseConfigured } from '@/lib/supabase'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -12,7 +13,13 @@ const password = ref('')
 const isRegister = ref(false)
 const showPassword = ref(false)
 const busy = ref(false)
-const errorMessage = ref(route.query.error ? 'Sesi tidak dapat dimuat. Silakan masuk kembali.' : '')
+const errorMessage = ref(
+  !isSupabaseConfigured
+    ? 'Koneksi Supabase belum dikonfigurasi. Atur URL dan publishable key untuk mengaktifkan login.'
+    : route.query.error
+      ? 'Sesi tidak dapat dimuat. Silakan masuk kembali.'
+      : '',
+)
 const successMessage = ref('')
 
 async function submit() {
@@ -64,7 +71,7 @@ async function submit() {
           <div class="input-wrap"><LockKeyhole :size="17" /><input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" placeholder="Minimal 6 karakter" minlength="6" required /><button class="password-toggle" type="button" aria-label="Tampilkan kata sandi" @click="showPassword = !showPassword"><EyeOff v-if="showPassword" :size="17" /><Eye v-else :size="17" /></button></div>
           <p v-if="errorMessage" class="form-message error-message">{{ errorMessage }}</p>
           <p v-if="successMessage" class="form-message success-message">{{ successMessage }}</p>
-          <button class="primary-button login-submit" :disabled="busy">{{ busy ? 'Memproses...' : isRegister ? 'Buat akun' : 'Masuk ke Fintrack' }} <ArrowRight :size="17" /></button>
+          <button class="primary-button login-submit" :disabled="busy || !isSupabaseConfigured">{{ busy ? 'Memproses...' : isRegister ? 'Buat akun' : 'Masuk ke Fintrack' }} <ArrowRight :size="17" /></button>
         </form>
 
         <p class="switch-auth">{{ isRegister ? 'Sudah punya akun?' : 'Belum punya akun?' }} <button type="button" @click="isRegister = !isRegister; errorMessage = ''; successMessage = ''">{{ isRegister ? 'Masuk' : 'Daftar gratis' }}</button></p>
