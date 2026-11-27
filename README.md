@@ -1,0 +1,27 @@
+# Fintrack
+
+Fintrack adalah pencatat keuangan personal untuk uang saku magang: pantau pemasukan dan pengeluaran bulanan, progres anggaran kos, dan tabungan sepanjang tahun. Aplikasi dibuat dengan Vue 3, TypeScript, Vite, Tailwind CSS v4, Pinia, Lucide, dan Supabase.
+
+## Jalankan secara lokal
+
+```sh
+npm install
+npm run dev
+```
+
+Tanpa kredensial Supabase, aplikasi terbuka dalam **mode demo**. Data demo disimpan di browser yang sedang digunakan.
+
+## Aktifkan Supabase
+
+1. Salin `.env.example` menjadi `.env.local`, lalu isi URL project dan anon/publishable key dari Supabase.
+2. Jalankan SQL di `supabase/schema.sql` melalui Supabase SQL Editor.
+3. Aktifkan Email/Password pada Authentication → Providers. Untuk alur pendaftaran tanpa konfirmasi, nonaktifkan Email Confirmations di pengaturan Auth; jika tetap aktif, pengguna perlu mengonfirmasi email sebelum masuk.
+4. Jalankan ulang server Vite setelah mengubah environment variable.
+
+Kredensial Supabase hanya menggunakan anon/publishable key di browser. Jangan pernah menaruh `service_role` key di aplikasi frontend. Kebijakan Row Level Security pada skema membatasi seluruh data ke pemilik akun masing-masing. Target anggaran awal dibuat otomatis saat pertama kali data bulan tersebut dimuat.
+
+## Perintah
+
+- `npm run dev` — server pengembangan
+- `npm run build` — type-check dan build produksi
+- `npm run lint` — pemeriksaan lint
