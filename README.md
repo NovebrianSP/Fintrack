@@ -22,6 +22,8 @@ Autentikasi Supabase wajib aktif. Tanpa kredensial Supabase, halaman utama tetap
 
 Kredensial Supabase hanya menggunakan anon/publishable key di browser. Jangan pernah menaruh `service_role` key di aplikasi frontend. Kebijakan Row Level Security pada skema membatasi seluruh data ke pemilik akun masing-masing. Target anggaran awal dibuat otomatis saat pertama kali data bulan tersebut dimuat. Jika skema sudah dijalankan sebelumnya, jalankan kembali blok `GRANT` di bagian akhir `supabase/schema.sql` agar role `authenticated` mendapat hak akses API yang dibutuhkan.
 
+Form login memvalidasi format email dan panjang password secara terpisah. Untuk kredensial yang ditolak Supabase, aplikasi tetap menampilkan pesan umum agar tidak mengungkap apakah suatu email terdaftar. UI membatasi 3 percobaan gagal per tab selama 15 menit; ini pelengkap UX, bukan pengganti rate limit sisi server Supabase.
+
 ## Perintah
 
 - `npm run dev` — server pengembangan

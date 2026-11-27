@@ -170,6 +170,14 @@ function setSection(value: Section) {
   mobileMenuOpen.value = false
 }
 
+function handleShellClick(event: MouseEvent) {
+  activePeriodDropdown.value = null
+  if (!mobileMenuOpen.value || !(event.target instanceof Element)) return
+  if (!event.target.closest('.sidebar') && !event.target.closest('.mobile-menu-button')) {
+    mobileMenuOpen.value = false
+  }
+}
+
 function showToast(message: string) {
   toastMessage.value = message
   window.setTimeout(() => { toastMessage.value = '' }, 3000)
@@ -308,8 +316,8 @@ function setSavedInput(month: number, event: Event) {
 </script>
 
 <template>
-  <div class="app-shell" @click="activePeriodDropdown = null" @keydown.esc="activePeriodDropdown = null">
-    <aside class="sidebar" :class="{ 'sidebar-open': mobileMenuOpen }">
+  <div class="app-shell" @click="handleShellClick" @keydown.esc="activePeriodDropdown = null">
+    <aside class="sidebar" :class="{ 'sidebar-open': mobileMenuOpen }" @click.stop>
       <a class="brand" href="#" @click.prevent="setSection('overview')"><span class="brand-icon"><Leaf :size="19" /></span> fintrack</a>
       <div class="workspace-label">WORKSPACE</div>
       <nav class="side-nav" aria-label="Navigasi utama">
@@ -336,7 +344,6 @@ function setSavedInput(month: number, event: Event) {
         <button class="icon-button mobile-menu-button" aria-label="Buka menu" @click="mobileMenuOpen = !mobileMenuOpen"><Menu :size="20" /></button>
         <div class="breadcrumb"><span>Workspace</span><span class="crumb-separator">/</span><strong>{{ section === 'overview' ? 'Ringkasan' : section === 'transactions' ? 'Transaksi' : 'Tabungan' }}</strong></div>
         <div class="top-actions">
-          <div class="sync-state"><span class="sync-indicator"></span>Supabase aktif</div>
           <button class="icon-button theme-toggle" :aria-label="theme.preference === 'system' ? 'Tema mengikuti sistem; ubah mode warna' : isDark ? 'Ganti ke mode terang' : 'Ikuti setelan sistem'" :title="theme.preference === 'system' ? 'Mengikuti setelan sistem' : isDark ? 'Mode gelap' : 'Mode terang'" @click="theme.toggle()"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
           <button class="icon-button notification-button" aria-label="Notifikasi" @click="showToast('Kamu sudah mengetahui semua kabar terbaru.')"><Bell :size="18" /><i></i></button>
           <div class="top-avatar">{{ auth.session?.user.email?.slice(0, 1).toUpperCase() ?? 'A' }}</div>
