@@ -3,8 +3,10 @@ import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
+useThemeStore()
 const route = useRoute()
 const router = useRouter()
 

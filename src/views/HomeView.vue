@@ -7,6 +7,7 @@ import {
   TrendingUp, Wallet, X, Trash2, Pencil, PiggyBank,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { budgetDefaults, savingDefaults, type MonthlyBudget, type MonthlySaving, type Transaction, type TransactionType } from '@/types/finance'
 import { currentDate, formatDate, formatRupiah } from '@/utils/formatters'
 import { supabase } from '@/lib/supabase'
@@ -22,7 +23,7 @@ const selectedYear = ref(now.getFullYear())
 const currentYear = now.getFullYear()
 const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const yearOptions = Array.from({ length: 6 }, (_item, index) => currentYear - 2 + index)
-const theme = ref<'light' | 'dark'>(localStorage.getItem('fintrack-theme') === 'dark' ? 'dark' : 'light')
+const theme = useThemeStore()
 const mobileMenuOpen = ref(false)
 const busy = ref(false)
 const pageError = ref('')
@@ -43,7 +44,7 @@ const form = reactive({
 })
 const savedInputs = reactive<Record<number, string>>({})
 
-const isDark = computed(() => theme.value === 'dark')
+const isDark = computed(() => theme.isDark)
 const selectedMonthName = computed(() => monthNames[selectedMonth.value - 1] ?? monthNames[0])
 
 async function loadData() {
@@ -93,10 +94,6 @@ watch([selectedMonth, selectedYear], () => {
   Object.keys(savedInputs).forEach((month) => { delete savedInputs[Number(month)] })
   void loadData()
 })
-watch(theme, (value) => {
-  document.documentElement.classList.toggle('dark', value === 'dark')
-  localStorage.setItem('fintrack-theme', value)
-}, { immediate: true })
 onMounted(() => { void loadData() })
 
 const visibleTransactions = computed(() =>
@@ -323,7 +320,7 @@ function setSavedInput(month: number, event: Event) {
         <div class="breadcrumb"><span>Workspace</span><span class="crumb-separator">/</span><strong>{{ section === 'overview' ? 'Ringkasan' : section === 'transactions' ? 'Transaksi' : 'Tabungan' }}</strong></div>
         <div class="top-actions">
           <div class="sync-state"><span class="sync-indicator"></span>Supabase aktif</div>
-          <button class="icon-button theme-toggle" :aria-label="isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'" @click="theme = isDark ? 'light' : 'dark'"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
+          <button class="icon-button theme-toggle" :aria-label="theme.preference === 'system' ? 'Tema mengikuti sistem; ubah mode warna' : isDark ? 'Ganti ke mode terang' : 'Ikuti setelan sistem'" :title="theme.preference === 'system' ? 'Mengikuti setelan sistem' : isDark ? 'Mode gelap' : 'Mode terang'" @click="theme.toggle()"><Sun v-if="isDark" :size="18" /><Moon v-else :size="18" /></button>
           <button class="icon-button notification-button" aria-label="Notifikasi" @click="showToast('Kamu sudah mengetahui semua kabar terbaru.')"><Bell :size="18" /><i></i></button>
           <div class="top-avatar">{{ auth.session?.user.email?.slice(0, 1).toUpperCase() ?? 'A' }}</div>
         </div>

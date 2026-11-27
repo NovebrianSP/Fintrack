@@ -2,6 +2,8 @@
 
 Fintrack adalah pencatat keuangan personal untuk uang saku magang: pantau pemasukan dan pengeluaran bulanan, progres anggaran kos, dan tabungan sepanjang tahun. Aplikasi dibuat dengan Vue 3, TypeScript, Vite, Tailwind CSS v4, Pinia, Lucide, dan Supabase.
 
+Tema warna secara default mengikuti preferensi sistem operasi. Tombol tema di dashboard dapat digunakan untuk memilih override terang/gelap atau kembali ke mode sistem.
+
 ## Jalankan secara lokal
 
 ```sh
