@@ -35,3 +35,5 @@ body { background: var(--page); color: var(--text); transition: background .2s, 
 button { border: 0; color: inherit; }
 ::placeholder { color: var(--muted); opacity: .8; }
 input, select { color: var(--text); }
+select option { background-color: var(--surface); color: var(--text); }
+select option:checked { background-color: var(--green); color: #fff; }

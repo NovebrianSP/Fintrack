@@ -25,6 +25,7 @@ const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Jul
 const yearOptions = Array.from({ length: 6 }, (_item, index) => currentYear - 2 + index)
 const theme = useThemeStore()
 const mobileMenuOpen = ref(false)
+const activePeriodDropdown = ref<'month' | 'year' | null>(null)
 const busy = ref(false)
 const pageError = ref('')
 const toastMessage = ref('')
@@ -43,6 +44,22 @@ const form = reactive({
   notes: '',
 })
 const savedInputs = reactive<Record<number, string>>({})
+
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error !== 'object' || error === null) return 'Kesalahan tidak diketahui.'
+
+  const parts = ['message', 'details', 'hint']
+    .map((key) => Reflect.get(error, key))
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+  const code = Reflect.get(error, 'code')
+  if (typeof code === 'string') parts.push(`Kode: ${code}`)
+  return parts.join(' — ') || 'Kesalahan tidak diketahui.'
+}
+
+function togglePeriodDropdown(period: 'month' | 'year') {
+  activePeriodDropdown.value = activePeriodDropdown.value === period ? null : period
+}
 
 const isDark = computed(() => theme.isDark)
 const selectedMonthName = computed(() => monthNames[selectedMonth.value - 1] ?? monthNames[0])
@@ -65,9 +82,9 @@ async function loadData() {
       supabase.from('monthly_budgets').select('*').eq('year', selectedYear.value),
       supabase.from('monthly_savings').select('*').eq('year', selectedYear.value),
     ])
-    if (transactionResult.error) throw transactionResult.error
-    if (budgetResult.error) throw budgetResult.error
-    if (savingResult.error) throw savingResult.error
+    if (transactionResult.error) throw new Error(`Tabel transactions: ${describeError(transactionResult.error)}`)
+    if (budgetResult.error) throw new Error(`Tabel monthly_budgets: ${describeError(budgetResult.error)}`)
+    if (savingResult.error) throw new Error(`Tabel monthly_savings: ${describeError(savingResult.error)}`)
     transactions.value = transactionResult.data as Transaction[]
     budgets.value = budgetResult.data as MonthlyBudget[]
     savings.value = savingResult.data as MonthlySaving[]
@@ -84,7 +101,7 @@ async function loadData() {
     }
   } catch (error) {
     console.error('Gagal memuat data keuangan:', error)
-    pageError.value = error instanceof Error ? `Tidak dapat memuat data Supabase: ${error.message}` : 'Tidak dapat memuat data Supabase.'
+    pageError.value = `Tidak dapat memuat data Supabase: ${describeError(error)}`
   } finally {
     busy.value = false
   }
@@ -210,7 +227,7 @@ async function saveTransaction() {
     showToast(editingTransactionId.value ? 'Transaksi berhasil diperbarui.' : 'Transaksi berhasil ditambahkan.')
   } catch (error) {
     console.error('Gagal menyimpan transaksi:', error)
-    formError.value = error instanceof Error ? `Transaksi gagal disimpan: ${error.message}` : 'Transaksi gagal disimpan.'
+    formError.value = `Transaksi gagal disimpan: ${describeError(error)}`
   } finally {
     busy.value = false
   }
@@ -225,7 +242,7 @@ async function deleteTransaction(item: Transaction) {
     showToast('Transaksi dihapus.')
   } catch (error) {
     console.error('Gagal menghapus transaksi:', error)
-    pageError.value = error instanceof Error ? `Transaksi gagal dihapus: ${error.message}` : 'Transaksi gagal dihapus.'
+    pageError.value = `Transaksi gagal dihapus: ${describeError(error)}`
   }
 }
 
@@ -255,7 +272,7 @@ async function updateMonthlySaving(month: number) {
     showToast(`Tabungan ${monthNames[month - 1]} tersimpan.`)
   } catch (error) {
     console.error('Gagal menyimpan tabungan:', error)
-    pageError.value = error instanceof Error ? `Tabungan gagal disimpan: ${error.message}` : 'Tabungan gagal disimpan.'
+    pageError.value = `Tabungan gagal disimpan: ${describeError(error)}`
   }
 }
 
@@ -267,7 +284,7 @@ async function signOut() {
     savings.value = []
     await router.replace({ name: 'login' })
   } catch (error) {
-    pageError.value = error instanceof Error ? `Gagal keluar: ${error.message}` : 'Gagal keluar dari akun.'
+    pageError.value = `Gagal keluar: ${describeError(error)}`
   }
 }
 
@@ -291,7 +308,7 @@ function setSavedInput(month: number, event: Event) {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" @click="activePeriodDropdown = null" @keydown.esc="activePeriodDropdown = null">
     <aside class="sidebar" :class="{ 'sidebar-open': mobileMenuOpen }">
       <a class="brand" href="#" @click.prevent="setSection('overview')"><span class="brand-icon"><Leaf :size="19" /></span> fintrack</a>
       <div class="workspace-label">WORKSPACE</div>
@@ -335,8 +352,83 @@ function setSavedInput(month: number, event: Event) {
             <p>{{ section === 'overview' ? 'Sedikit lebih dekat dengan tujuanmu hari ini.' : section === 'transactions' ? 'Semua arus uangmu, tercatat rapi.' : 'Lihat tabunganmu tumbuh, bulan demi bulan.' }}</p>
           </div>
           <div class="heading-actions">
-            <label class="period-select"><CalendarDays :size="16" /><select v-model.number="selectedMonth" aria-label="Pilih bulan"><option v-for="(month, index) in monthNames" :key="month" :value="index + 1">{{ month }}</option></select><ChevronDown :size="14" /></label>
-            <label class="period-select year-select"><select v-model.number="selectedYear" aria-label="Pilih tahun"><option v-for="year in yearOptions" :key="year" :value="year">{{ year }}</option></select><ChevronDown :size="14" /></label>
+            <div class="relative" @click.stop>
+              <button
+                type="button"
+                class="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--green)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green)]"
+                aria-haspopup="listbox"
+                :aria-expanded="activePeriodDropdown === 'month'"
+                aria-label="Pilih bulan"
+                @click.stop="togglePeriodDropdown('month')"
+              >
+                <span class="grid size-7 place-items-center rounded-lg bg-[var(--green-soft)] text-[var(--green)]"><CalendarDays :size="15" /></span>
+                <span class="min-w-[4.5rem] text-left">{{ selectedMonthName }}</span>
+                <ChevronDown :size="14" class="text-[var(--muted)] transition-transform duration-200" :class="{ 'rotate-180': activePeriodDropdown === 'month' }" />
+              </button>
+              <Transition name="dropdown-popover">
+                <div
+                  v-if="activePeriodDropdown === 'month'"
+                  class="absolute right-0 top-full z-40 mt-2 w-52 origin-top-right overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl shadow-black/10 ring-1 ring-black/5"
+                  role="listbox"
+                  aria-label="Pilih bulan"
+                  @click.stop
+                >
+                  <p class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[.12em] text-[var(--muted)]">Pilih bulan</p>
+                  <div class="max-h-72 overflow-y-auto">
+                    <button
+                      v-for="(month, index) in monthNames"
+                      :key="month"
+                      type="button"
+                      role="option"
+                      :aria-selected="selectedMonth === index + 1"
+                      class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--green)]"
+                      :class="{ 'bg-[var(--green-soft)] text-[var(--green)] hover:bg-[var(--green-soft)]': selectedMonth === index + 1 }"
+                      @click.stop="selectedMonth = index + 1; activePeriodDropdown = null"
+                    >
+                      {{ month }}
+                      <Check v-if="selectedMonth === index + 1" :size="14" />
+                    </button>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+            <div class="relative" @click.stop>
+              <button
+                type="button"
+                class="inline-flex h-10 min-w-[5.5rem] items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--green)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--green)]"
+                aria-haspopup="listbox"
+                :aria-expanded="activePeriodDropdown === 'year'"
+                aria-label="Pilih tahun"
+                @click.stop="togglePeriodDropdown('year')"
+              >
+                {{ selectedYear }}
+                <ChevronDown :size="14" class="text-[var(--muted)] transition-transform duration-200" :class="{ 'rotate-180': activePeriodDropdown === 'year' }" />
+              </button>
+              <Transition name="dropdown-popover">
+                <div
+                  v-if="activePeriodDropdown === 'year'"
+                  class="absolute right-0 top-full z-40 mt-2 w-36 origin-top-right overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl shadow-black/10 ring-1 ring-black/5"
+                  role="listbox"
+                  aria-label="Pilih tahun"
+                  @click.stop
+                >
+                  <p class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[.12em] text-[var(--muted)]">Pilih tahun</p>
+                  <button
+                    v-for="year in yearOptions"
+                    :key="year"
+                    type="button"
+                    role="option"
+                    :aria-selected="selectedYear === year"
+                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--green)]"
+                    :class="{ 'bg-[var(--green-soft)] text-[var(--green)] hover:bg-[var(--green-soft)]': selectedYear === year }"
+                    @click.stop="selectedYear = year; activePeriodDropdown = null"
+                  >
+                    {{ year }}
+                    <Check v-if="selectedYear === year" :size="14" />
+                  </button>
+                </div>
+              </Transition>
+            </div>
             <button class="primary-button add-button" @click="openTransaction()"><Plus :size="17" /> Catat transaksi</button>
           </div>
         </div>
@@ -507,6 +599,7 @@ function setSavedInput(month: number, event: Event) {
 .transaction-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}.mini-stat{display:flex;align-items:center;gap:11px;padding:15px 17px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}.mini-stat-icon{display:grid;width:34px;height:34px;place-items:center;border-radius:9px}.mini-stat-icon.green{background:var(--green-soft);color:var(--green)}.mini-stat-icon.coral{background:#fff0ec;color:#d97c5d}.mini-stat-icon.blue{background:#eef1fc;color:#6878bf}.mini-stat div{display:grid;gap:4px}.mini-stat div span{color:var(--muted);font-size:10px}.mini-stat strong{font-size:13px}.full-transactions{margin-bottom:16px}.table-actions{display:flex;align-items:center;gap:9px}.record-count{color:var(--muted);font-size:10px}.filter-button,.compact-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);font-size:10px}.compact-button{height:32px;border-color:var(--green);background:var(--green);color:white}.row-actions{display:flex;gap:3px}.row-actions .icon-button{width:27px;height:27px}.delete-action:hover{background:#fff0ec;color:var(--red)}.full-table td{padding-top:12px;padding-bottom:12px}.transactions-budget{padding:19px 20px}.budget-progress-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 26px;margin-top:20px}.budget-progress-grid .budget-item-foot{font-size:9px}
 .savings-year-summary{display:grid;gap:14px;margin-bottom:16px}.annual-total-card{position:relative;display:flex;min-height:130px;align-items:flex-start;gap:15px;overflow:hidden;padding:21px;border:1px solid #286a4d;border-radius:11px;background:#1a4935;color:#fff}.annual-icon{display:grid;width:39px;height:39px;flex:none;place-items:center;border:1px solid #ffffff27;border-radius:11px;background:#ffffff13;color:#a6e2bf}.annual-total-card>div:nth-child(2){z-index:1;display:grid;gap:6px}.annual-total-card>div:nth-child(2)>span{color:#b4d2bf;font-size:10px}.annual-total-card strong{font-family:Manrope,sans-serif;font-size:25px;letter-spacing:-.7px}.annual-total-card small{display:flex;align-items:center;gap:4px;color:#a6d7b8;font-size:9px}.annual-decoration{position:absolute;right:0;bottom:0;display:flex;height:100px;align-items:flex-end;gap:8px;opacity:.16;transform:skewX(-25deg);padding-right:40px}.annual-decoration span{width:22px;border-radius:4px 4px 0 0;background:#b8f1cf}.annual-decoration span:nth-child(1){height:34%}.annual-decoration span:nth-child(2){height:52%}.annual-decoration span:nth-child(3){height:65%}.annual-decoration span:nth-child(4){height:78%}.annual-decoration span:nth-child(5){height:100%}.saving-post-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.saving-post-card{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 7px;padding:13px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}.saving-post-card>span:nth-child(2){overflow:hidden;color:var(--muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}.saving-post-card strong{grid-column:1/-1;font-size:13px}.saving-post-card small{grid-column:1/-1;color:var(--muted);font-size:9px}.annual-table-panel{padding:20px}.annual-table-heading{align-items:center;margin-bottom:18px}.annual-table-heading p{margin:6px 0 0;color:var(--muted);font-size:10px}.year-badge{padding:6px 9px;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10px;font-weight:600}.annual-table-wrap{overflow:auto}.annual-table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap}.annual-table th{padding:0 12px 10px}.annual-table th:first-child,.annual-table td:first-child{padding-left:0}.annual-table td{padding:9px 12px;border-top:1px solid var(--border);font-size:10px}.annual-table td:first-child{display:grid;gap:2px}.annual-table td:first-child strong{font-size:10px}.month-year{color:var(--muted);font-size:8px}.annual-progress{display:flex;align-items:center;gap:8px}.annual-progress .progress-track{width:80px;height:5px}.annual-progress small{color:var(--muted);font-size:9px}.saving-input-cell{display:flex;align-items:center;gap:5px}.saving-input-cell input{width:96px;height:27px;padding:0 7px;border:1px solid var(--border);border-radius:5px;outline:none;background:var(--surface-muted);font-size:10px}.saving-input-cell input:focus{border-color:var(--green)}.save-row-button{display:grid;width:27px;height:27px;place-items:center;border-radius:5px;background:var(--green-soft);color:var(--green)}.save-row-button:hover{background:var(--green);color:white}.allocation-note{display:flex;gap:11px;margin-top:17px;padding:13px;border:1px solid var(--border);border-radius:8px;background:var(--surface-muted)}.allocation-note-icon{display:grid;width:29px;height:29px;flex:none;place-items:center;border-radius:7px;background:var(--green-soft);color:var(--green)}.allocation-note strong{font-size:10px}.allocation-note p{margin:5px 0 0;color:var(--muted);font-size:9px;line-height:1.7}.allocation-note b{color:var(--text)}
 .alert-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:17px;padding:10px 12px;border:1px solid #edc8bd;border-radius:7px;background:#fff2ee;color:#a34f43;font-size:11px}.alert-banner button{display:grid;place-items:center;background:transparent;color:inherit}
+.dropdown-popover-enter-active,.dropdown-popover-leave-active{transition:opacity .15s ease,transform .15s ease}.dropdown-popover-enter-from,.dropdown-popover-leave-to{opacity:0;transform:translateY(-5px) scale(.98)}
 .modal-backdrop{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:#13201972;backdrop-filter:blur(3px)}.transaction-modal{width:min(100%,440px);padding:22px;border:1px solid var(--border);border-radius:13px;background:var(--surface);box-shadow:0 24px 80px #0002}.modal-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:19px}.modal-heading h2{margin:7px 0 0;font-family:Manrope,sans-serif;font-size:19px}.transaction-form{display:grid;gap:12px}.transaction-form label{display:grid;gap:6px;color:var(--text);font-size:10px;font-weight:600}.transaction-form input,.transaction-form select{width:100%;height:39px;padding:0 10px;border:1px solid var(--border);border-radius:6px;outline:none;background:var(--surface-muted);font-size:11px}.transaction-form input:focus,.transaction-form select:focus{border-color:var(--green)}.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:4px;border-radius:8px;background:var(--surface-muted)}.type-toggle button{display:flex;height:34px;align-items:center;justify-content:center;gap:6px;border-radius:6px;background:transparent;color:var(--muted);font-size:10px;font-weight:600}.type-toggle button.selected{background:var(--surface);color:var(--green);box-shadow:var(--shadow)}.optional{color:var(--muted);font-weight:400}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}.cancel-button{padding:0 13px;border:1px solid var(--border);border-radius:7px;background:var(--surface);font-size:10px}.form-message{margin:0;font-size:10px}.error-message{color:var(--red)}.success-message{color:var(--green)}.toast-message{position:fixed;right:25px;bottom:24px;z-index:70;display:flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);color:var(--text);font-size:11px}.fade-enter-active,.fade-leave-active{transition:opacity .2s}.fade-enter-from,.fade-leave-to{opacity:0}.toast-enter-active,.toast-leave-active{transition:all .2s}.toast-enter-from,.toast-leave-to{opacity:0;transform:translateY(8px)}
 @media(max-width:1100px){.sidebar{width:220px}.main-content{margin-left:220px}.topbar{padding:0 26px}.page-wrap{padding-right:26px;padding-left:26px}.dashboard-grid{grid-template-columns:minmax(0,1.3fr) minmax(250px,.9fr)}.saving-post-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:800px){.sidebar{width:250px;transform:translateX(-101%);transition:transform .22s;box-shadow:none}.sidebar.sidebar-open{transform:translateX(0);box-shadow:15px 0 50px #0002}.main-content{margin-left:0;padding-bottom:65px}.topbar{height:58px;padding:0 20px}.mobile-menu-button{display:grid;margin-right:8px}.breadcrumb{margin-right:auto}.top-actions{gap:12px}.mobile-bottom-nav{position:fixed;inset:auto 0 0;z-index:15;display:flex;height:63px;align-items:center;justify-content:space-around;border-top:1px solid var(--border);background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}.mobile-bottom-nav button{display:grid;min-width:58px;justify-items:center;gap:3px;background:transparent;color:var(--muted);font-size:9px}.mobile-bottom-nav button.active{color:var(--green)}.page-wrap{padding:27px 22px 25px}.page-heading{align-items:flex-start}.heading-actions{flex-wrap:wrap;justify-content:flex-end}.dashboard-grid{grid-template-columns:minmax(0,1.25fr) minmax(235px,.9fr)}.summary-grid{gap:10px}.summary-card{padding:15px 13px}.summary-value{font-size:18px}.saving-post-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}

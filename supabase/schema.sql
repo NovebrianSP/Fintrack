@@ -58,3 +58,8 @@ create policy "Users manage their own savings"
   on public.monthly_savings for all to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table public.transactions to authenticated;
+grant select, insert, update, delete on table public.monthly_budgets to authenticated;
+grant select, insert, update, delete on table public.monthly_savings to authenticated;

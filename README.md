@@ -20,7 +20,7 @@ Autentikasi Supabase wajib aktif. Tanpa kredensial Supabase, halaman utama tetap
 3. Aktifkan Email/Password pada Authentication → Providers. Untuk alur pendaftaran tanpa konfirmasi, nonaktifkan Email Confirmations di pengaturan Auth; jika tetap aktif, pengguna perlu mengonfirmasi email sebelum masuk.
 4. Jalankan ulang server Vite setelah mengubah environment variable.
 
-Kredensial Supabase hanya menggunakan anon/publishable key di browser. Jangan pernah menaruh `service_role` key di aplikasi frontend. Kebijakan Row Level Security pada skema membatasi seluruh data ke pemilik akun masing-masing. Target anggaran awal dibuat otomatis saat pertama kali data bulan tersebut dimuat.
+Kredensial Supabase hanya menggunakan anon/publishable key di browser. Jangan pernah menaruh `service_role` key di aplikasi frontend. Kebijakan Row Level Security pada skema membatasi seluruh data ke pemilik akun masing-masing. Target anggaran awal dibuat otomatis saat pertama kali data bulan tersebut dimuat. Jika skema sudah dijalankan sebelumnya, jalankan kembali blok `GRANT` di bagian akhir `supabase/schema.sql` agar role `authenticated` mendapat hak akses API yang dibutuhkan.
 
 ## Perintah
 
