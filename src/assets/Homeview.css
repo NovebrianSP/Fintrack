@@ -33,3 +33,56 @@
 @media(max-width:800px){.app-shell .sidebar{width:250px;transform:translateX(-101%);transition:transform .22s;box-shadow:none}.app-shell .sidebar.sidebar-open{transform:translateX(0);box-shadow:15px 0 50px #0002}.app-shell .main-content{margin-left:0;padding-bottom:65px}.app-shell .topbar{height:58px;padding:0 20px}.app-shell .mobile-menu-button{display:grid;margin-right:8px}.app-shell .breadcrumb{margin-right:auto}.app-shell .top-actions{gap:12px}.app-shell .mobile-bottom-nav{position:fixed;inset:auto 0 0;z-index:15;display:flex;height:63px;align-items:center;justify-content:space-around;border-top:1px solid var(--border);background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}.app-shell .mobile-bottom-nav button{display:grid;min-width:58px;justify-items:center;gap:3px;background:transparent;color:var(--muted);font-size:9px}.app-shell .mobile-bottom-nav button.active{color:var(--green)}.app-shell .page-wrap{padding:27px 22px 25px}.app-shell .page-heading{align-items:flex-start}.app-shell .heading-actions{flex-wrap:wrap;justify-content:flex-end}.app-shell .dashboard-grid{grid-template-columns:minmax(0,1.25fr) minmax(235px,.9fr)}.app-shell .summary-grid{gap:10px}.app-shell .summary-card{padding:15px 13px}.app-shell .summary-value{font-size:18px}.app-shell .saving-post-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:620px){.app-shell .topbar{padding:0 14px}.app-shell .breadcrumb{font-size:11px}.app-shell .sync-state{font-size:0}.app-shell .sync-indicator{width:8px;height:8px}.app-shell .top-actions{gap:7px}.app-shell .page-wrap{padding:22px 14px 20px}.app-shell .page-heading{display:block;margin-bottom:19px}.app-shell .page-heading h1{font-size:24px}.app-shell .heading-actions{justify-content:flex-start;margin-top:14px}.app-shell .period-select{height:34px}.app-shell .period-select select{width:76px}.app-shell .year-select select{width:43px}.app-shell .add-button{margin-left:auto;height:34px}.app-shell .summary-grid{grid-template-columns:1fr 1fr;gap:9px}.app-shell .summary-card{min-height:128px;padding:14px 12px}.app-shell .summary-card:last-child{grid-column:1/-1;min-height:113px}.app-shell .summary-value{font-size:17px}.app-shell .summary-caption{font-size:9px}.app-shell .dashboard-grid{grid-template-columns:1fr;gap:11px}.app-shell .budget-panel,.app-shell .savings-panel,.app-shell .transactions-panel{padding:16px 13px}.app-shell .panel-heading h2{font-size:13px}.app-shell .budget-values{font-size:9px}.app-shell .budget-list{gap:12px}.app-shell .savings-highlight{margin-top:14px}.app-shell .transactions-panel{margin-top:0}.app-shell .transaction-table th,.app-shell .transaction-table td{padding-right:8px;padding-left:8px}.app-shell .transaction-table td{font-size:9px}.app-shell .transaction-name{gap:6px}.app-shell .transaction-name strong{font-size:9px}.app-shell .transaction-icon{width:26px;height:26px}.app-shell .category-chip{font-size:8px;padding:4px 5px}.app-shell .transaction-stats{gap:7px}.app-shell .mini-stat{gap:7px;padding:11px 9px}.app-shell .mini-stat-icon{width:28px;height:28px}.app-shell .mini-stat div span{font-size:8px}.app-shell .mini-stat strong{font-size:10px}.app-shell .table-actions{gap:5px}.app-shell .record-count{font-size:9px}.app-shell .filter-button,.app-shell .compact-button{height:29px;padding:0 7px;font-size:9px}.app-shell .budget-progress-grid{grid-template-columns:1fr;gap:15px}.app-shell .saving-post-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.app-shell .annual-total-card{min-height:112px;padding:17px 14px}.app-shell .annual-total-card strong{font-size:21px}.app-shell .annual-table-panel{padding:16px 12px}.app-shell .annual-table-heading p{max-width:270px;line-height:1.5}.app-shell .annual-table td{padding-right:8px;padding-left:8px}.app-shell .annual-progress .progress-track{width:52px}.app-shell .saving-input-cell input{width:76px}.app-shell .allocation-note{padding:11px}.app-shell .toast-message{right:12px;bottom:76px;left:12px;justify-content:center}.app-shell .footer-note{padding-bottom:6px}.app-shell .full-transactions .transaction-heading{align-items:flex-start;flex-wrap:wrap}.app-shell .full-transactions .table-actions{width:100%;justify-content:flex-end}.app-shell .full-table{min-width:770px}.app-shell .transaction-table:not(.full-table){min-width:590px}}
 @media(prefers-reduced-motion:reduce){.app-shell *,.app-shell *::before,.app-shell *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.app-shell .transaction-modal {
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.app-shell .transaction-form input[type="checkbox"],
+.app-shell .transaction-form input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+
+.app-shell .transaction-form .recurring-option {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  cursor: pointer;
+}
+
+.app-shell .transaction-form .recurring-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-muted);
+}
+
+.app-shell .transaction-form .recurring-status > span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+.app-shell .transaction-form .recurring-status label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
