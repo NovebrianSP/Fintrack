@@ -24,6 +24,32 @@ export interface Transaction {
   title: string
   amount: number
   notes: string | null
+  recurring_bill_id?: string | null
+  is_paid?: boolean
+  created_at?: string
+}
+
+export interface RecurringBill {
+  id: string
+  user_id: string
+  title: string
+  category: ExpenseCategory
+  amount: number
+  due_day: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface RecurringBillPayment {
+  id: string
+  user_id: string
+  bill_id: string
+  month: number
+  year: number
+  due_date: string
+  is_paid: boolean
+  paid_at: string | null
+  transaction_id: string | null
   created_at?: string
 }
 
